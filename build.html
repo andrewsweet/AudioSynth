@@ -1,0 +1,770 @@
+<html>
+<style>
+body {
+	text-align:center;
+	background:#452267;
+	color:#fff;
+}
+</style>
+<script src="audiosynth.js"></script>
+<script src="Queue.js"></script>
+<script>
+var modCache = {};
+var mods = {
+  'src/main.js' : function(module) {
+    
+    var mainloop = require('/Users/Andrew/Documents/Carnegie Mellon University/2014-2015 Senior/02 Spring/Game Engine Programming/sald/sald/mainloop.js');
+    
+    sald.size = {x:0, y:0, mode:"multiple"};
+    sald.scene = require('src/synth.js');
+    
+    window.main = function main() {
+    	mainloop.start(document.getElementById("canvas"));
+    };},
+  '/Users/Andrew/Documents/Carnegie Mellon University/2014-2015 Senior/02 Spring/Game Engine Programming/sald/sald/mainloop.js' : function(module) {
+    if (typeof(window.sald) === "undefined") {
+    	window.sald = {};
+    }
+    
+    //Just 'require'-ing this file installs several useful global properties:
+    window.sald.scene = {}; //the current scene; update, draw, scrollWheel,  and key functions will be called.
+    window.sald.ctx = null; //the drawing context, call canvas 2d functions here
+    window.sald.size = {x:320, y:240, mode:"exact"}; //set your desired size here
+    window.sald.keys = {}; //all keys currently held down
+    window.sald.mouseButtons = {}; //all mouse buttons currently held down
+    window.sald.mouse = null;
+    window.sald.takeRightClickInput = true;
+    
+    window.sald.keyCode = {
+    	"BACKSPACE": 8,
+    	"TAB": 9,
+    	"ENTER": 13,
+    	"SHIFT": 16,
+    	"CONTROL": 17,
+    	"ALT": 18,
+    	"PAUSE": 19,
+    	"CAPS_LOCK": 20,
+    	"ESCAPE": 27,
+    	"SPACEBAR": 32,
+    	"PAGE_UP": 33,
+    	"PAGE_DOWN": 34,
+    	"END": 35,
+    	"HOME": 36,
+    	"LEFT": 37,
+    	"UP": 38,
+    	"RIGHT": 39,
+    	"DOWN": 40,
+    	"INSERT": 45,
+    	"DELETE": 46,
+    	"ZERO": 48,
+    	"ONE": 49,
+    	"TWO": 50,
+    	"THREE": 51,
+    	"FOUR": 52,
+    	"FIVE": 53,
+    	"SIX": 54,
+    	"SEVEN": 55,
+    	"EIGHT": 56,
+    	"NINE": 57,
+    	"A": 65,
+    	"B": 66,
+    	"C": 67,
+    	"D": 68,
+    	"E": 69,
+    	"F": 70,
+    	"G": 71,
+    	"H": 72,
+    	"I": 73,
+    	"J": 74,
+    	"K": 75,
+    	"L": 76,
+    	"M": 77,
+    	"N": 78,
+    	"O": 79,
+    	"P": 80,
+    	"Q": 81,
+    	"R": 82,
+    	"S": 83,
+    	"T": 84,
+    	"U": 85,
+    	"V": 86,
+    	"W": 87,
+    	"X": 88,
+    	"Y": 89,
+    	"Z": 90,
+    	"WINDOWS": 91,
+    	"NUMPAD_0": 96,
+    	"NUMPAD_1": 97,
+    	"NUMPAD_2": 98,
+    	"NUMPAD_3": 99,
+    	"NUMPAD_4": 100,
+    	"NUMPAD_5": 101,
+    	"NUMPAD_6": 102,
+    	"NUMPAD_7": 103,
+    	"NUMPAD_8": 104,
+    	"NUMPAD_9": 105,
+    	"NUMPAD_ASTERISK": 106,
+    	"NUMPAD_MULTIPLY": 107,
+    	"NUMPAD_MINUS": 109,
+    	"NUMPAD_PERIOD": 110,
+    	"NUMPAD_DIVIDE": 111,
+    	"F1": 112,
+    	"F2": 113,
+    	"F3": 114,
+    	"F4": 115,
+    	"F5": 116,
+    	"F6": 117,
+    	"F7": 118,
+    	"F8": 119,
+    	"F9": 120,
+    	"F10": 121,
+    	"F11": 122,
+    	"F12": 123,
+    	"NUM_LOCK": 144,
+    	"SCROLL_LOCK": 145,
+    	"MY_COMPUTER": 182,
+    	"MY_CALCULATOR": 183,
+    	"SEMICOLON": 186,
+    	"EQUALS": 187,
+    	"COMMA": 188,
+    	"MINUS": 189,
+    	"PERIOD": 190,
+    	"FORWARD_SLASH": 191,
+    	"TILDE": 192,
+    	"OPEN_BRACKET": 219,
+    	"BACK_SLASH": 220,
+    	"CLOSE_BRACKET": 221,
+    	"APOSTROPHE": 222
+    };
+    
+    function generateKeyCodeToString(json){
+    	// json must be keys that are strings, integer values
+    	var max_i = Number.MIN_VALUE;
+    
+    	var array = [];
+    
+    	for (var key in json){
+    		if (json.hasOwnProperty(key)){
+    			var i = json[key];
+    
+    			array[i] = key;
+    		}
+    	}
+    
+    	return function (i) {
+    		return array[i];
+    	}
+    }
+    
+    window.sald.keyCodeToString = generateKeyCodeToString(window.sald.keyCode);
+    
+    //This function sets up the main loop:
+    function start(canvas) {
+    	
+    	var sald = window.sald; //redundant, probably
+    
+    	window.sald.ctx = canvas.getContext('2d');
+    
+    	//------------ handle canvas sizing --------------
+    
+    	var currentFactor = -1;
+    
+    	function resized() {
+    		var parent = canvas.parentNode;
+    		var parentStyle = getComputedStyle(parent);
+    		var maxSize = {width:parent.clientWidth, height:parent.clientHeight};
+    		maxSize.width -= parseInt(parentStyle.getPropertyValue("padding-left")) + parseInt(parentStyle.getPropertyValue("padding-right"));
+    		maxSize.height -= parseInt(parentStyle.getPropertyValue("padding-top")) + parseInt(parentStyle.getPropertyValue("padding-bottom"));
+    
+    		var factor;
+    
+    		if (typeof(sald.size.mode) === "undefined" || sald.size.mode === "exact") {
+    			factor = 1;
+    		} else if (sald.size.mode === "multiple") {
+    			factor = Math.floor(Math.min(maxSize.width / sald.size.x, maxSize.height / sald.size.y)) | 0;
+    			factor = Math.max(1, factor);
+    		} else if (sald.size.mode === "ratio") {
+    			factor = Math.min(maxSize.width / sald.size.x, maxSize.height / sald.size.y);
+    			factor = Math.max(1, factor);
+    		}
+    
+    		if (factor != currentFactor) {
+    			currentFactor = factor;
+    
+    			var width = Math.round(sald.size.x * factor);
+    			var height = Math.round(sald.size.y * factor);
+    
+    			//actually set canvas size:
+    			//   ...both the display size:
+    			canvas.style.width = width + "px";
+    			canvas.style.height = height + "px";
+    			//   ...and the actual pixel count:
+    			canvas.width = width;
+    			canvas.height = height;
+    
+    			//store the information into the drawing context for other code:
+    			sald.ctx.width = width;
+    			sald.ctx.height = height;
+    			sald.ctx.factor = factor;
+    		}
+    	}
+    
+    	//install 'resized' to handle window resize events:
+    	window.addEventListener('resize', resized);
+    	//also call it now to set up a good initial size:
+    	resized();
+    
+    
+    	// -----------------------
+    	// ----- Main Loop -------
+    	// -----------------------
+    	var previous = NaN;
+    	function render(timestamp) {
+    		if (isNaN(previous)) {
+    			previous = timestamp;
+    		}
+    		var elapsed = (timestamp - previous) / 1000.0;
+    		previous = timestamp;
+    
+    		if(elapsed > .1) elapsed = .1;
+    		
+    		sald.scene && sald.scene.update && sald.scene.update(elapsed);
+    		sald.scene && sald.scene.draw && sald.scene.draw();
+    
+    		window.requestAnimationFrame(render);
+    	};
+    
+    	window.addEventListener('keydown', function(evt){
+    		var keyString =  window.sald.keyCodeToString(evt.keyCode);
+    
+    		var keydownsToIgnorePreventingDefault = {
+    			 "WINDOWS" : true,
+    			 "CONTROL" : true
+    			};
+    
+    		if (sald.keys[keyString]) {
+    			//already handled this keydown
+    		} else {
+    			sald.keys[keyString] = true;
+    			sald.scene && sald.scene.key && sald.scene.key(evt.keyCode, true);
+    		}
+    
+    		// TODO figure out which keys to prevent default, and when
+    		if (!(keyString in keydownsToIgnorePreventingDefault)){
+    			if (!(("WINDOWS" in sald.keys && sald.keys["WINDOWS"]) ||
+    					"CONTROL" in sald.keys && sald.keys["CONTROL"])){
+    				evt.preventDefault();
+    			}
+    		}
+    		return false;
+    	});
+    	
+    	window.addEventListener('keyup', function(evt){
+    		var keyString =  window.sald.keyCodeToString(evt.keyCode);
+    
+    		delete sald.keys[keyString];
+    		
+    		sald.scene && sald.scene.key && sald.scene.key(evt.keyCode, false);
+    		
+    		// TODO figure out which keys to prevent default, and when
+    		evt.preventDefault();
+    		return false;
+    	});
+    	
+    	// Right click
+    	canvas.addEventListener('contextmenu', function(ev) {
+    		if (window.sald.takeRightClickInput){
+    	    	ev.preventDefault();
+    		}
+    
+    	    return !window.sald.takeRightClickInput;
+    	}, !window.sald.takeRightClickInput);
+    
+    	function getClickType(e){
+    		var evt = (e == null ? event : e);
+    
+    		var clickType = 'LEFT';
+    
+    		if (evt.which){
+    			if (evt.which == 3){
+    				clickType = 'RIGHT';
+    			} else if (evt.which == 2){
+    				clickType = 'MIDDLE';
+    			}
+    		} else if (evt.button) {
+    			if (evt.button == 2) {
+    				clickType = 'RIGHT';
+    			} else {
+    				clickType = 'MIDDLE';
+    			}
+    		}
+    
+    		return clickType;
+    	}
+    
+    	window.onmouseup = function (e) {
+    		
+    		var clickType = getClickType(e);
+    		var skipEvent = false;
+    
+    		if (clickType === "RIGHT" && !window.sald.takeRightClickInput){
+    			skipEvent = true;
+    		}
+    
+    		if (!skipEvent){
+    			if (clickType in sald.mouseButtons && sald.mouseButtons[clickType]){
+    				delete sald.mouseButtons[clickType];
+    				sald.scene && sald.scene.mousePress && sald.scene.mousePress(sald.mouse, clickType, false);
+    			}
+    		}
+    
+    		// TODO figure out which keys to prevent default, and when
+    		// evt.preventDefault();
+    		return false;
+    	}
+    
+    	canvas.onmousedown = function(e) {
+    		
+    		var clickType = getClickType(e);
+    		var skipEvent = false;
+    
+    		if (clickType === "RIGHT" && !window.sald.takeRightClickInput){
+    			skipEvent = true;
+    		}
+    
+    		if (!skipEvent){
+    			if (sald.mouseButtons[clickType]) {
+    				//already handled this keydown
+    			} else {
+    				sald.mouseButtons[clickType] = true;
+    				sald.scene && sald.scene.mousePress && sald.scene.mousePress(sald.mouse, clickType, true);
+    			}
+    		}
+    
+    		// TODO figure out which keys to prevent default, and when
+    		// evt.preventDefault();
+    		return false;
+    	}
+    	
+    	window.addEventListener('mousemove', function (evt) {
+    		var rect = canvas.getBoundingClientRect();
+    
+    		//The '0.5' additions here seem to align a '+' drawn at the cursor
+    		//  position to the cursor better, but I'm not sure why:
+    		var x = (evt.clientX + 0.5 - rect.left);
+    		var y = (evt.clientY + 0.5 - rect.top);
+    
+    		sald.mouse = {x:x, y:y};
+    
+    		evt.preventDefault();
+    
+    		sald.scene && sald.scene.onMouseMove && sald.scene.onMouseMove(sald.mouse);
+    
+    		return false;		
+    	});
+    	
+    	if (canvas.addEventListener){
+    		//chrome/ie9/safari/opera
+    		canvas.addEventListener("mousewheel", mouseWheel, false);
+    		//firefox
+    		canvas.addEventListener("DOMMouseScroll", mouseWheel, false);
+    	} else {
+    		canvas.attachEvent("onmousewheel", mouseWheel);
+    	}
+    
+    	function mouseWheel(e){
+    		var e = window.event || e;
+    		//1 for up, -1 for down
+    		var delta;
+    
+    		if ('wheelDelta' in e){
+    			delta = event.wheelDelta;
+    		} else { // Firefox
+    			delta = -40 * event.detail;
+    		}
+    
+    		if (sald.scene && sald.scene.scrollWheel){
+    			sald.scene.scrollWheel(delta);
+    			e.preventDefault();
+    		}
+    		
+    		return false;
+    	};
+    	window.requestAnimationFrame(render);
+    };
+    
+    
+    module.exports = {
+    	start:start
+    };},
+  'src/synth.js' : function(module) {
+    var piano = Synth.createInstrument('piano');
+    Synth.setSampleRate(20000); // sets sample rate to 20000Hz
+    
+    function help(){
+    	console.log("Keys to use:\n Press H for help,\n Q/A for gain,\n W/S for attack,\n E/D for decay,\n R/F for instrument type,\n ENTER to start/stop recording,\n SPACE to play and pause");
+    }
+    
+    // Q and A adjust gain
+    var gain   = 0.5;
+    
+    // W and S adjust attack
+    var attack = 0.5;
+    
+    // E and D adjust decay
+    var decay  = 0.5;
+    
+    // R and F adjust instrument type
+    var instrumentType = 0;
+    
+    var startLoopTime;
+    var endLoopTime;
+    
+    var isRecording = false;
+    
+    var timeInLoop = 0;
+    
+    var savedLoop = new Queue();
+    var currentLoop;
+    
+    var shouldLoop = false;
+    
+    var lastKeyPressTime;
+    
+    var queuedNote = null;
+    
+    createInstrument();
+    var myInstrument = Synth.createInstrument('my_sound');
+    
+    function setupLoop(){
+    	// create a new queue
+    	var queue = new Queue();
+    
+    	// enqueue an item
+    	queue.enqueue('item');
+    
+    	// dequeue an item
+    	var item = queue.dequeue();
+    }
+    
+    function draw() {
+    	var ctx = sald.ctx;
+    
+    	//First, clear the screen:
+    	ctx.setTransform(ctx.factor,0, 0,ctx.factor, 0,0);
+    	ctx.fillStyle = "#f0f"; //bright pink, since this *should* be drawn over
+    
+    	ctx.fillRect(0, 0, 320, 240); //<--- hardcoded size. bad style!
+    
+    	//don't interpolate scaled images. Let's see those crisp pixels:
+    	ctx.imageSmoothingEnabled = false;
+    }
+    
+    function clearCache(){
+    	Synth.setSampleRate(Synth.getSampleRate());
+    }
+    
+    function update(elapsed) {
+    	if (shouldLoop){
+    		timeInLoop += elapsed * 1000;
+    
+    		if (timeInLoop >= loopTime){
+    			timeInLoop = 0;
+    			currentLoop = savedLoop.cloneQueue();
+    			queuedNote = null;
+    		}
+    
+    		if (queuedNote === null){
+    			queuedNote = currentLoop.dequeue();
+    		}
+    
+    		if (queuedNote !== null && queuedNote !== undefined){
+    			if (queuedNote.t <= timeInLoop){
+    				playKey(queuedNote.key, true);
+    				queuedNote = null;
+    			}
+    		}
+    	}
+    
+    	if (sald.keys["Q"]){
+    		gain += 0.04;
+    		if (gain > 1.0) gain = 1.0;
+    
+    		console.log("gain: " + gain);
+    		setVolume(gain);
+    	}
+    
+    	if (sald.keys["A"]){
+    		gain -= 0.04;
+    		if (gain < 0.0) gain = 0.0;
+    
+    		console.log("gain: " + gain);
+    		setVolume(gain);
+    	}
+    
+    	if (sald.keys["W"]){
+    		attack += 0.04;
+    		if (attack > 1.0) attack = 1.0;
+    
+    		console.log("attack: " + attack);
+    		clearCache();
+    	}
+    
+    	if (sald.keys["S"]){
+    		attack -= 0.04;
+    		if (attack < 0.0) attack = 0.0;
+    
+    		console.log("attack: " + attack);
+    		clearCache();
+    	}
+    
+    	if (sald.keys["E"]){
+    		decay += 0.04;
+    		if (decay > 1.0) decay = 1.0;
+    
+    		console.log("decay: " + decay);
+    		clearCache();
+    	}
+    
+    	if (sald.keys["D"]){
+    		decay -= 0.04;
+    		if (decay < 0.0) decay = 0.0;
+    
+    		console.log("decay: " + decay);
+    		clearCache();
+    	}
+    }
+    
+    function createInstrument(){
+    	// Load a sound profile from an object...
+    	Synth.loadSoundProfile({
+    		// name it
+    		name: 'my_sound',
+    		// WIP: return the length of time, in seconds, the attack lasts
+    		attack: function(sampleRate, frequency, volume) { 
+    			return 0;
+    		},
+    		// WIP: return a number representing the rate of signal decay.
+    		// larger = faster decay
+    		dampen: function(sampleRate, frequency, volume) { 
+    			return 1;
+    		},
+    		// wave function: calculate the amplitude of your sine wave based on i (index)
+    		wave: function(i, sampleRate, frequency, volume) {
+    			var v = Math.sin(2 * Math.PI * (i/sampleRate) * frequency);
+    
+    			var mod = [];
+    
+    			var base = function(x) {
+    				x = x || 0;
+    				return Math.sin((2 * Math.PI) * (i / sampleRate) * frequency + (x * Math.PI));
+    			};
+    
+    			if (instrumentType > 2){
+    				mod.push(function(x) { 
+    					return 1 * Math.sin(2 * Math.PI * ((i / sampleRate) * frequency) + x); });
+    			}
+    			if (instrumentType > 1){
+    				mod.push(function(x) { 
+    					return 0.5 * Math.sin(2 * Math.PI * ((i / sampleRate) * frequency) + x); });
+    			}
+    			if (instrumentType > 0){
+    				mod.push(function(x) { 
+    					return 0.25 * Math.sin(2 * Math.PI * ((i / sampleRate) * frequency) + x); });
+    			
+    				v = mod[0](Math.pow(base(0), 2) + (0.75 * base(0.25)) + (0.1 * base(0.5)));
+    			}
+    
+    			var curVol = 1;
+    
+    			if (i <= sampleRate * attack) {
+    				// Linear build-up, fast.
+    				curVol = (volume * (i/(sampleRate*attack))/sampleRate) / 2;
+    			} else {
+    				if (this.vars.seconds == null){
+    					this.vars.seconds = currentTime();
+    				}
+    
+    				var seconds = currentTime() - this.vars.seconds;
+    				// Decay. Exponentially increasing (faster) decay
+    				// at higher frequencies due to logarithmic dampener.
+    				var dampen = Math.pow(0.5*Math.log((frequency*volume*decay)/sampleRate), 2);
+    				curVol = volume * Math.pow(
+    					((1-((i-(sampleRate*attack))/(sampleRate*(seconds-attack))))/2.5),dampen
+    				);
+    			}
+    
+    			v = curVol * v;
+    
+    			v = Math.min(Math.max(v, -1), 1);
+    
+    			return v;
+    		}
+    
+    	});
+    }
+    
+    function setVolume(vol){
+    	Synth.setVolume(vol);
+    }
+    
+    function playNote(letter, number){
+    	myInstrument.play(letter, number, 2);
+    }
+    
+    function currentTime() {
+    	var d = new Date();
+    	var n = d.getTime();
+    
+    	return n;
+    }
+    
+    function stopRecording() {
+    	if (isRecording){
+    		isRecording = false;
+    		endLoopTime = currentTime();
+    		loopTime = (endLoopTime - startLoopTime);
+    
+    		currentLoop = savedLoop.cloneQueue();
+    
+    		console.log("Stop Recording");
+    		console.log(savedLoop);
+    	}
+    }
+    
+    function playKey(key, state) {
+    	if (state == true){
+    
+    		var isNumberKey = true;
+    
+    		if (key == sald.keyCode.ONE){
+    			console.log("C5");
+    			playNote('C', 5);
+    		} else  if (key == sald.keyCode.TWO){
+    			console.log("D5");
+    			playNote('D', 5);
+    		} else if (key == sald.keyCode.THREE){
+    			console.log("E5");
+    			playNote('E', 5);
+    		} else if (key == sald.keyCode.FOUR){
+    			console.log("F5");
+    			playNote('F', 5);
+    		} else if (key == sald.keyCode.FIVE){
+    			console.log("G5");
+    			playNote('G', 5);
+    		} else if (key == sald.keyCode.SIX){
+    			console.log("A5");
+    			playNote('A', 5);
+    		} else if (key == sald.keyCode.SEVEN){
+    			console.log("B5");
+    			playNote('B', 5);
+    		} else if (key == sald.keyCode.EIGHT){
+    			console.log("C6");
+    			playNote('C', 6);
+    		} else if (key == sald.keyCode.NINE){
+    			console.log("D6");
+    			playNote('D', 6);
+    		} else if (key == sald.keyCode.ZERO){
+    			console.log("E6");
+    			playNote('E', 6);
+    		} else {
+    			isNumberKey = false;
+    		}
+    
+    		if (key == sald.keyCode.ENTER){
+    			if (isRecording){
+    				// Stop Recording
+    				stopRecording();
+    			} else {
+    				// Start Recording
+    				savedLoop = new Queue();
+    
+    				shouldLoop = false;
+    				isRecording = true;
+    				startLoopTime = currentTime();
+    
+    				console.log("Start Recording");
+    			}
+    		}
+    
+    		if (key == sald.keyCode.SPACEBAR){
+    			shouldLoop = !shouldLoop;
+    
+    			if (shouldLoop){
+    				stopRecording();
+    				console.log("Playing loop...");
+    			} else {
+    				console.log("Stop loop.");
+    			}
+    		} else if (key == sald.keyCode.SPACE){ // Depends on version of SALD
+    			shouldLoop = !shouldLoop;
+    
+    			if (shouldLoop){
+    				stopRecording();
+    				console.log("Playing loop...");
+    			} else {
+    				console.log("Stop loop.");
+    			}
+    		}
+    
+    		if (isRecording && isNumberKey){
+    			var time = currentTime();
+    
+    			var t = time - startLoopTime;
+    
+    			savedLoop.enqueue({t : t, key : key});
+    
+    			console.log("SAVED " + key);
+    		}
+    	}
+    }
+    
+    function key(key, state) {
+    	playKey(key, state);
+    
+    	if (state){
+    		if (key == sald.keyCode.R){
+    			instrumentType++;
+    			if (instrumentType > 3) instrumentType = 3;
+    
+    			console.log("instrumentType: " + instrumentType);
+    			clearCache();
+    		} else if (key == sald.keyCode.F){
+    			instrumentType--;
+    			if (instrumentType < 0) instrumentType = 0;
+    
+    			console.log("instrumentType: " + instrumentType);
+    			clearCache();
+    		} else if (key == sald.keyCode.H){
+    			help();
+    		}
+    	}
+    }
+    
+    
+    module.exports = {
+    	draw:draw,
+    	update:update,
+    	key:key
+    };
+    }
+}
+function require(s) {
+	if(modCache[s] == null) {
+		modCache[s] = {exports:{}};
+		mods[s](modCache[s]);
+		return modCache[s].exports;
+	} else {
+		return modCache[s].exports;
+	}
+}
+require("src/main.js");
+
+</script>
+<body onload="window.main()">
+<canvas id="canvas"></canvas>
+<p>
+Open up the developer console for "User Interface."
+</p>
+</body>
+</html>
