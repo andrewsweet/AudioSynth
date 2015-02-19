@@ -21,6 +21,7 @@ var instrumentType = 0;
 
 var startLoopTime;
 var endLoopTime;
+var loopTime = null;
 
 var isRecording = false;
 
@@ -234,6 +235,19 @@ function stopRecording() {
 	}
 }
 
+function spaceBarPressed() {
+	if (loopTime != null){
+		shouldLoop = !shouldLoop;
+
+		if (shouldLoop){
+			stopRecording();
+			console.log("Playing loop...");
+		} else {
+			console.log("Stop loop.");
+		}
+	}
+}
+
 function playKey(key, state) {
 	if (state == true){
 
@@ -290,23 +304,9 @@ function playKey(key, state) {
 		}
 
 		if (key == sald.keyCode.SPACEBAR){
-			shouldLoop = !shouldLoop;
-
-			if (shouldLoop){
-				stopRecording();
-				console.log("Playing loop...");
-			} else {
-				console.log("Stop loop.");
-			}
+			spaceBarPressed();
 		} else if (key == sald.keyCode.SPACE){ // Depends on version of SALD
-			shouldLoop = !shouldLoop;
-
-			if (shouldLoop){
-				stopRecording();
-				console.log("Playing loop...");
-			} else {
-				console.log("Stop loop.");
-			}
+			spaceBarPressed();
 		}
 
 		if (isRecording && isNumberKey){
