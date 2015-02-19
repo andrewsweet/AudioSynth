@@ -5,6 +5,8 @@ function help(){
 	console.log("Keys to use:\n Press H for help,\n1, 2, 3, 4, 5, 6, 7, 8, 9, 0 are piano keys,\n Q/A for gain,\n W/S for attack,\n E/D for decay,\n R/F for instrument type,\n ENTER to start/stop recording,\n SPACE to play and pause");
 }
 
+help();
+
 // Q and A adjust gain
 var gain   = 0.5;
 
