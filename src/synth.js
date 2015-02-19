@@ -138,6 +138,10 @@ function update(elapsed) {
 	}
 }
 
+/*
+ * Modified from example createInstrument on 
+ * http://keithwhor.github.io/audiosynth/
+ */
 function createInstrument(){
 	// Load a sound profile from an object...
 	Synth.loadSoundProfile({
